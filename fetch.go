@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/mongodb/grip"
+	"github.com/deciduosity/grip"
 	"github.com/pkg/errors"
 )
 

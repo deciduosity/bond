@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/mongodb/amboy"
-	"github.com/mongodb/amboy/queue"
-	"github.com/mongodb/grip"
+	"github.com/deciduosity/amboy"
+	"github.com/deciduosity/amboy/queue"
+	"github.com/deciduosity/grip"
 	"github.com/pkg/errors"
-	"github.com/tychoish/bond"
+	"github.com/deciduosity/bond"
 )
 
 // DownloadReleases accesses the feed and, based on the arguments

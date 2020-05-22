@@ -11,8 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mongodb/grip"
-	"github.com/mongodb/grip/message"
+	"github.com/deciduosity/grip"
+	"github.com/deciduosity/grip/message"
 	"github.com/pkg/errors"
 )
 
