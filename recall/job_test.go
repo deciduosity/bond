@@ -11,7 +11,7 @@ import (
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/dependency"
 	"github.com/deciduosity/amboy/registry"
-	"github.com/deciduosity/grip"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,25 +26,23 @@ type DownloadJobSuite struct {
 }
 
 func TestDownloadJobSuite(t *testing.T) {
-	t.Parallel()
 	suite.Run(t, new(DownloadJobSuite))
 }
 
 func (s *DownloadJobSuite) SetupSuite() {
-	var err error
 	s.require = s.Require()
-	// s.tempDir, err = ioutil.TempDir("", uuid.NewV4().String())
-	s.tempDir, err = ioutil.TempDir("", "")
+}
+
+func (s *DownloadJobSuite) TearDownTest() {
+	err := os.RemoveAll(s.tempDir)
 	s.require.NoError(err)
 }
 
-func (s *DownloadJobSuite) TearDownSuite() {
-	grip.Warningln("leaking tempdir for quicker tests:", s.tempDir)
-	// err := os.RemoveAll(s.tempDir)
-	// s.require.NoError(err)
-}
-
 func (s *DownloadJobSuite) SetupTest() {
+	var err error
+	s.tempDir, err = ioutil.TempDir("", uuid.New().String())
+	s.require.NoError(err)
+
 	s.job = newDownloadJob()
 }
 
@@ -194,11 +192,15 @@ func (s *DownloadJobSuite) TestJobSmokeTests() {
 		j.Run(context.TODO())
 		s.NoError(j.Error())
 
-		_, err = os.Stat(filepath.Join(s.tempDir, fn))
+		archive := filepath.Join(s.tempDir, fn)
+		extDir := getTargetDirectory(archive)
+
+		stat, err := os.Stat(archive)
 		s.False(os.IsNotExist(err))
-		stat, err := os.Stat(filepath.Join(s.tempDir, fn[:len(fn)-4]))
-		s.Require().False(os.IsNotExist(err))
-		s.Require().NotNil(stat)
+		s.False(stat.IsDir())
+
+		stat, err = os.Stat(extDir)
+		s.False(os.IsNotExist(err))
 		s.True(stat.IsDir())
 	}
 }
@@ -266,7 +268,6 @@ func (s *DownloadJobSuite) TestIfDependencyIsSatisfiedAndForceIsSetThereIsNoNoop
 //
 
 func TestJobRegistry(t *testing.T) {
-	t.Parallel()
 	assert := assert.New(t)
 
 	var names []string

@@ -1,26 +1,22 @@
 package recall
 
 import (
-	"archive/tar"
-	"archive/zip"
-	"compress/gzip"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/mholt/archiver"
 	"github.com/deciduosity/amboy"
 	"github.com/deciduosity/amboy/dependency"
 	"github.com/deciduosity/amboy/job"
 	"github.com/deciduosity/amboy/registry"
+	"github.com/deciduosity/bond"
 	"github.com/deciduosity/grip"
 	"github.com/deciduosity/grip/message"
+	"github.com/mholt/archiver"
 	"github.com/pkg/errors"
-	"github.com/deciduosity/bond"
 )
 
 // DownloadFileJob is an amboy.Job implementation that supports
@@ -119,79 +115,12 @@ func (j *DownloadFileJob) Run(ctx context.Context) {
 //
 
 func extractArchive(fn string) error {
-	dir := filepath.Dir(fn)
+	return errors.WithStack(archiver.Unarchive(fn, getTargetDirectory(fn)))
+}
+
+func getTargetDirectory(fn string) string {
 	baseName := filepath.Base(fn)
-	baseName = baseName[:len(baseName)-4]
-
-	if filepath.Ext(fn) == ".tgz" {
-		// there is no tar.gz because we renamed it in setURL()
-		if err := archiver.TarGz.Open(fn, dir); err != nil {
-			return errors.Wrap(err, "problem extracting archive")
-		}
-
-		f, err := os.Open(fn)
-		if err != nil {
-			return errors.Wrap(err, "error opening file")
-		}
-		defer f.Close()
-
-		gzr, err := gzip.NewReader(f)
-		if err != nil {
-			return errors.Wrap(err, "problem reading gzip")
-		}
-		defer gzr.Close()
-
-		archive := tar.NewReader(gzr)
-		for {
-			header, err := archive.Next()
-			if err == io.EOF {
-				return errors.Wrap(err, "could not read archive contents")
-			}
-			if strings.HasSuffix(header.Name, "mongod") {
-				dirName := filepath.Dir(filepath.Dir(header.Name))
-				if baseName != dirName {
-					if err := os.Rename(filepath.Join(dir, dirName),
-						filepath.Join(dir, baseName)); err != nil {
-
-						return errors.Wrapf(err, "error renaming %s to %s", dirName, baseName)
-					}
-				}
-				break
-			}
-		}
-	} else if filepath.Ext(fn) == ".zip" {
-		if err := archiver.Zip.Open(fn, dir); err != nil {
-			return errors.Wrap(err, "problem extracting archive")
-		}
-		r, err := zip.OpenReader(fn)
-		if err != nil {
-			return errors.Wrap(err, "problem parsing archive")
-		}
-
-		for _, f := range r.File {
-			if strings.HasSuffix(f.Name, "mongod.exe") {
-				// name is generally mongodb-<platform>-<version>/bin/mongo
-				// call filepath.Dir twice to get the magic parts.
-				dirName := filepath.Dir(filepath.Dir(f.Name))
-				if baseName != dirName {
-					if err := os.Rename(filepath.Join(dir, dirName),
-						filepath.Join(dir, baseName)); err != nil {
-
-						return errors.Wrapf(err, "error renaming %s to %s", dirName, baseName)
-					}
-				}
-			}
-		}
-	} else {
-		return errors.Errorf("file %s is in unsupported archive format", fn)
-	}
-
-	grip.Debug(message.Fields{
-		"file": fn,
-		"op":   "extracted archive",
-	})
-
-	return nil
+	return filepath.Join(filepath.Dir(fn), baseName[:len(baseName)-len(filepath.Ext(baseName))])
 }
 
 func attemptTimestampUpdate(fn string) {

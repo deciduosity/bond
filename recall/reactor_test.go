@@ -3,14 +3,15 @@ package recall
 import (
 	"errors"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/deciduosity/grip"
+	"github.com/deciduosity/bond"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/deciduosity/bond"
 )
 
 type ReactorSuite struct {
@@ -20,22 +21,18 @@ type ReactorSuite struct {
 }
 
 func TestReactorSuite(t *testing.T) {
-	t.Parallel()
 	suite.Run(t, new(ReactorSuite))
 }
-
-func (s *ReactorSuite) SetupSuite() {
+func (s *ReactorSuite) SetupTest() {
 	var err error
 	s.require = s.Require()
-	// s.tempDir, err = ioutil.TempDir("", uuid.NewV4().String())
-	s.tempDir, err = ioutil.TempDir("", "")
+	s.tempDir, err = ioutil.TempDir("", uuid.New().String())
 	s.require.NoError(err)
 }
 
-func (s *ReactorSuite) TearDownSuite() {
-	grip.Warningln("leaking tempdir for quicker tests:", s.tempDir)
-	// err := os.RemoveAll(s.tempDir)
-	// s.require.NoError(err)
+func (s *ReactorSuite) TearDownTest() {
+	err := os.RemoveAll(s.tempDir)
+	s.require.NoError(err)
 }
 
 func (s *ReactorSuite) TestJobCreator() {
@@ -125,7 +122,6 @@ func (s *ReactorSuite) TestDownloadInvalidOptionsWithValidReleases() {
 ////////////////////////////////////////////////////////////////////////
 
 func TestErrorAggregator(t *testing.T) {
-	t.Parallel()
 	assert := assert.New(t)
 
 	// hand a single channel with no errors, and observe no aggregate errors.
