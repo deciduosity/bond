@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/deciduosity/amboy"
-	"github.com/deciduosity/amboy/queue"
-	"github.com/deciduosity/grip"
+	"github.com/cdr/amboy"
+	"github.com/cdr/amboy/queue"
+	"github.com/cdr/grip"
 	"github.com/pkg/errors"
 	"github.com/deciduosity/bond"
 )
